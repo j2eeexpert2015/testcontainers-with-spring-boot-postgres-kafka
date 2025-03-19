@@ -39,8 +39,8 @@ This project is a Spring Boot application that provides a RESTful API for managi
 1.  **Clone the repository:**
 
 ```bash
-git clone <repository_url>
-cd retail-order-system-with-postgres-kafka
+git clone https://github.com/j2eeexpert2015/testcontainers-with-spring-boot-postgres-kafka.git
+cd testcontainers-with-spring-boot-postgres-kafka
 ```
 
 2.  **Build the application:**
