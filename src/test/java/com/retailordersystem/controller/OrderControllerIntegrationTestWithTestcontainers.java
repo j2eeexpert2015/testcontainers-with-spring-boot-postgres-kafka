@@ -1,6 +1,7 @@
 package com.retailordersystem.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import com.retailordersystem.constants.DockerImageConstants;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -105,11 +107,15 @@ public class OrderControllerIntegrationTestWithTestcontainers {
         assertThat(orders).hasSize(1);
         assertThat(orders.get(0).getStatus()).isEqualTo("NEW");
 
-        // Verify Kafka event consumption
-        OrderPlacedEvent receivedEvent = consumeKafkaEvent("order_placed_topic");
-        assertThat(receivedEvent).isNotNull();
-        assertThat(receivedEvent.orderId()).isEqualTo(orders.get(0).getId());
-        assertThat(receivedEvent.orderStatus()).isEqualTo("PROCESSED");
+        // Verify Kafka event consumption using Awaitility
+        await().atMost(5, TimeUnit.SECONDS) // Adjust timeout as needed
+                .pollInterval(500, TimeUnit.MILLISECONDS) // Adjust polling interval
+                .untilAsserted(() -> {
+                    OrderPlacedEvent receivedEvent = consumeKafkaEvent("order_placed_topic");
+                    assertThat(receivedEvent).isNotNull();
+                    assertThat(receivedEvent.orderId()).isEqualTo(orders.get(0).getId());
+                    assertThat(receivedEvent.orderStatus()).isEqualTo("PROCESSED");
+                });
     }
     
    

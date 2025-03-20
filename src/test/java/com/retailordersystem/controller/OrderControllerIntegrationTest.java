@@ -1,6 +1,7 @@
 package com.retailordersystem.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -89,16 +91,19 @@ public class OrderControllerIntegrationTest {
         assertThat(orders).hasSize(1);
         assertThat(orders.get(0).getDescription()).isEqualTo("Test Description");
 
-        // Verify Kafka event consumption
-        OrderPlacedEvent receivedEvent = consumeKafkaEvent("order_placed_topic");
-        assertThat(receivedEvent).isNotNull();
-        assertThat(receivedEvent.orderId()).isEqualTo(orders.get(0).getId());
-        assertThat(receivedEvent.orderStatus()).isEqualTo("PROCESSED");
+        // Verify Kafka event consumption using Awaitility
+        await().atMost(5, TimeUnit.SECONDS) // Adjust timeout as needed
+                .pollInterval(500, TimeUnit.MILLISECONDS) // Adjust polling interval
+                .untilAsserted(() -> {
+                    OrderPlacedEvent receivedEvent = consumeKafkaEvent("order_placed_topic");
+                    assertThat(receivedEvent).isNotNull();
+                    assertThat(receivedEvent.orderId()).isEqualTo(orders.get(0).getId());
+                    assertThat(receivedEvent.orderStatus()).isEqualTo("PROCESSED");
+                });
     }
 
 private OrderPlacedEvent consumeKafkaEvent(String topic) {
     	
-    	Map<String, Object> i = consumerFactory.getConfigurationProperties();
         // Kafka Consumer Configuration
         Properties props = getTestKafkaConfig(consumerFactory.getConfigurationProperties());
 
